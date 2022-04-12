@@ -27,6 +27,7 @@ namespace l2dcmd
         static bool verbose = false;
         static bool download = false;
         static bool forcecheck = false;
+        static Meow.Rinko.Core.Live2d.Live2dList j;
         static void Main(string[] args)
         {
             Console.WriteLine("");
@@ -43,12 +44,12 @@ namespace l2dcmd
                         Console.WriteLine(help); 
                         return;
                     }
-                    foreach(var k in args)
+                    ConnectAndDownLoadList();
+                    foreach (var k in args)
                     {
                         if (k == "-l")
                         {
                             Console.WriteLine("正在获取最新列表 [Getting Newest List()]");
-                            var j = new Meow.Rinko.Core.Live2d.Live2dList();
                             foreach (var d in j.Data)
                             {
                                 Console.WriteLine($"{d.Value.assetBundleName} :: {d.Key}");
@@ -61,7 +62,6 @@ namespace l2dcmd
                             if (int.TryParse(args[1], out int patternnum))
                             {
                                 Console.WriteLine("正在获取最新列表 [Getting Newest List()]");
-                                var j = new Meow.Rinko.Core.Live2d.Live2dList();
                                 var result = from aa in j.Data where aa.Value.characterId == patternnum select aa;
                                 foreach (var d in result)
                                 {
@@ -79,7 +79,6 @@ namespace l2dcmd
                         {
                             var pattern = args[1];
                             Console.WriteLine("正在获取最新列表 [Getting Newest List()]");
-                            var j = new Meow.Rinko.Core.Live2d.Live2dList();
                             Console.WriteLine("正在搜索核对 [Validating]");
                             var result = from aa in j.Data where Regex.IsMatch(aa.Value.assetBundleName, pattern) select aa;
                             foreach (var d in result)
@@ -98,7 +97,6 @@ namespace l2dcmd
                             }
                             Console.WriteLine($"下载路径 [PATH]: {args[2]}");
                             Console.WriteLine("正在获取最新列表核对下载 [Getting Newest List for ()]");
-                            var j = new Meow.Rinko.Core.Live2d.Live2dList();
                             if (int.TryParse(args[1], out int patternnum))
                             {
                                 var kk = j.Data[patternnum].getLive2dPack().Data.DownloadModel(args[2]).GetAwaiter().GetResult();
@@ -170,7 +168,6 @@ namespace l2dcmd
             Task.Factory.StartNew(() =>
             {
                 Console.WriteLine("正在获取最新列表 [Getting Newest List()]");
-                var j = new Meow.Rinko.Core.Live2d.Live2dList();
                 Console.WriteLine($"执行下载中 [On Download] - 总计 [Total]:{j.Data.Count}");
                 foreach (var x in j.Data)
                 {
@@ -213,6 +210,42 @@ namespace l2dcmd
                 if (exitable)
                 {
                     return;
+                }
+            }
+        }
+        private static void ConnectAndDownLoadList()
+        {
+            while (true)
+            {
+                var cts = new System.Threading.CancellationTokenSource();
+                Task<Meow.Rinko.Core.Live2d.Live2dList> t1 = Task.Run(() =>
+                {
+                    if (cts.Token.IsCancellationRequested)
+                    {
+                        return null;
+                    }
+                    else
+                    {
+                        Console.WriteLine("** TRY TO CONNECT BESTDORI **");
+                        var j = new Meow.Rinko.Core.Live2d.Live2dList();
+                        Console.WriteLine("** CONNECT COMPLETE **");
+                        return j;
+                    }
+                },cts.Token);
+                Task t2 = Task.Run(() => {
+                    Task.Delay(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+                    return;
+                });
+                if (Task.WaitAny(t1, t2) == 0)
+                {
+                    j = t1.Result;
+                    return;
+                }
+                else
+                {
+                    
+                    cts.Cancel();
+                    Console.WriteLine("** CONNECT TIMED-OUT RESTARTING **");
                 }
             }
         }
